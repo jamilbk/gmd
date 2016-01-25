@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# A simple script to fetch, merge feature branches into develop
+# and staging.
+
+ERROR_ABT="echo \"Error detected. Aborting\"; exit 1;"
+BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
+git add .
+git commit
+if [[ "$BRANCH_NAME" =~ ^(master|develop|staging)$ ]]; then
+  echo "Error: Wrong branch detected. Please run from feature branch." 1>&2
+  exit 1
+else
+  git push origin $BRANCH_NAME
+  git checkout develop
+  GIT_EDITOR=true git merge --no-ff $BRANCH_NAME
+  if git pull origin develop; then
+    git push origin develop
+    git checkout staging
+    if git pull origin staging; then
+      if GIT_EDITOR=true git merge --no-ff develop; then
+        git push origin staging
+      else
+        `$ERROR_ABT`
+      fi
+    else
+      `$ERROR_ABT`
+    fi
+  else
+    `$ERROR_ABT`
+  fi
+fi
